@@ -1,10 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-const uniqueTitle = "new product " + Math.floor(Math.random() * 1_000_000);
-
 function uniqueProduct() {
+  const title = "new product " + Math.floor(Math.random() * 1_000_000);
   return {
-    title: `${uniqueTitle}`,
+    title,
     price: 50,
     description: "Created by Playwright API test",
     categoryId: 1,
@@ -17,8 +16,7 @@ let initialProductSlug: string;
 
 test.describe("Products API", () => {
   test.beforeAll(async ({ request }) => {
-    const response = await request.get(`products?limit=1`);
-    expect(response).toBeOK();
+    const response = await request.get(`products?limit=1`, { failOnStatusCode: true });
     const [initialProduct] = await response.json();
     initialProductId = initialProduct.id;
     initialProductSlug = initialProduct.slug;
@@ -29,13 +27,11 @@ test.describe("Products API", () => {
     const productId = initialProductId;
 
     // Act
-    const response = await request.get(`products/${productId}`);
+    const response = await request.get(`products/${productId}`, { failOnStatusCode: true });
     const product = await response.json();
 
     // Assert
-    expect(response).toBeOK();
-    expect(product).toHaveProperty("id", productId);
-    expect(product).toHaveProperty("slug", initialProductSlug);
+    expect(product).toMatchObject({ id: productId, slug: initialProductSlug });
   });
 
   test("get a single product by slug", async ({ request }) => {
@@ -43,12 +39,11 @@ test.describe("Products API", () => {
     const slug = initialProductSlug;
 
     // Act
-    const response = await request.get(`products/slug/${slug}`);
+    const response = await request.get(`products/slug/${slug}`, { failOnStatusCode: true });
     const product = await response.json();
 
     // Assert
-    expect(response).toBeOK();
-    expect(product).toHaveProperty("slug", slug);
+    expect(product).toMatchObject({ slug });
   });
 
   test("create a product", async ({ request }) => {
@@ -56,50 +51,53 @@ test.describe("Products API", () => {
     const payload = uniqueProduct();
 
     // Act
-    const response = await request.post(`products`, { data: payload });
+    const response = await request.post(`products`, { data: payload, failOnStatusCode: true });
     const product = await response.json();
 
     // Assert
     expect(response.status()).toBe(201);
-    expect(product).toHaveProperty("title", payload.title);
-    expect(product).toHaveProperty("price", payload.price);
-    expect(product).toHaveProperty("description", payload.description);
-    expect(product).toHaveProperty("category.id", payload.categoryId);
-    expect(product).toHaveProperty("images", payload.images);
+    expect(product).toMatchObject({
+      title: payload.title,
+      price: payload.price,
+      description: payload.description,
+      category: { id: payload.categoryId },
+      images: payload.images,
+    });
   });
 
   test("update a product", async ({ request }) => {
     // Arrange
     const createResponse = await request.post(`products`, {
       data: uniqueProduct(),
+      failOnStatusCode: true,
     });
     expect(createResponse.status()).toBe(201);
-    const { id } = await createResponse.json();
-    const updatePayload = { ...uniqueProduct(), title: `Updated ${uniqueTitle}`, price: 99 };
+    const { id, title } = await createResponse.json();
+    const updatePayload = { ...uniqueProduct(), title: `Updated ${title}`, price: 99 };
 
     // Act
     const updateResponse = await request.put(`products/${id}`, {
       data: updatePayload,
+      failOnStatusCode: true,
     });
     const updated = await updateResponse.json();
 
     // Assert
     expect(updateResponse).toBeOK();
-    expect(updated).toHaveProperty("id", id);
-    expect(updated).toHaveProperty("title", updatePayload.title);
-    expect(updated).toHaveProperty("price", updatePayload.price);
+    expect(updated).toMatchObject({ id, title: updatePayload.title, price: updatePayload.price });
   });
 
   test("delete a product", async ({ request }) => {
     // Arrange
     const createResponse = await request.post(`products`, {
       data: uniqueProduct(),
+      failOnStatusCode: true,
     });
     expect(createResponse.status()).toBe(201);
     const { id } = await createResponse.json();
 
     // Act
-    const deleteResponse = await request.delete(`products/${id}`);
+    const deleteResponse = await request.delete(`products/${id}`, { failOnStatusCode: true });
     const result = await deleteResponse.json();
 
     // Assert
@@ -112,10 +110,10 @@ test.describe("Products API", () => {
     const limit = 5;
 
     // Act
-    const page1Response = await request.get(`products?offset=0&limit=${limit}`);
+    const page1Response = await request.get(`products?offset=0&limit=${limit}`, { failOnStatusCode: true });
     const page1 = await page1Response.json();
 
-    const page2Response = await request.get(`products?offset=${limit}&limit=${limit}`);
+    const page2Response = await request.get(`products?offset=${limit}&limit=${limit}`, { failOnStatusCode: true });
     const page2 = await page2Response.json();
 
     // Assert
@@ -140,11 +138,10 @@ test.describe("Products API", () => {
     const productId = initialProductId;
 
     // Act
-    const response = await request.get(`products/${productId}/related`);
+    const response = await request.get(`products/${productId}/related`, { failOnStatusCode: true });
     const related = await response.json();
 
     // Assert
-    expect(response).toBeOK();
     expect(Array.isArray(related)).toBeTruthy();
     expect(related.every((p: { id: number }) => p.id !== productId)).toBe(true);
   });
@@ -154,11 +151,10 @@ test.describe("Products API", () => {
     const slug = initialProductSlug;
 
     // Act
-    const response = await request.get(`products/slug/${slug}/related`);
+    const response = await request.get(`products/slug/${slug}/related`, { failOnStatusCode: true });
     const related = await response.json();
 
     // Assert
-    expect(response).toBeOK();
     expect(Array.isArray(related)).toBeTruthy();
     expect(related.every((p: { slug: string }) => p.slug !== slug)).toBe(true);
   });
