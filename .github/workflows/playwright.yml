@@ -8,8 +8,6 @@ jobs:
   test:
     timeout-minutes: 5
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -25,8 +23,17 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 5
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
       - name: Publish report to GitHub Pages
-        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
