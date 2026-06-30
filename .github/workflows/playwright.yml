@@ -8,6 +8,8 @@ jobs:
   test:
     timeout-minutes: 5
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -24,7 +26,7 @@ jobs:
           path: playwright-report/
           retention-days: 5
       - name: Publish report to GitHub Pages
-        if: ${{ !cancelled()}}
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
